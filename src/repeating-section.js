@@ -6,7 +6,7 @@ export default ngModule => {
 
     formlyConfigProvider.setType({
       name: 'repeatSection',
-      templateUrl: './repeatsection.html',
+      template: require('./repeating-section.html'),
       controller: [ '$scope', function($scope) {
 
         $scope.formOptions = {formState: $scope.formState};

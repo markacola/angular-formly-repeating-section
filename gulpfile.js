@@ -4,12 +4,12 @@ var gulp = require('gulp');
 var gutil = require('gulp-util');
 var browserify = require('browserify');
 var babelify = require('babelify');
+var stringify = require('stringify');
 var watchify = require('watchify');
 var notify = require('gulp-notify');
-var ngHtml2Js = require("gulp-ng-html2js");
-var minifyHtml = require("gulp-minify-html");
-var concat = require("gulp-concat");
-var uglify = require("gulp-uglify");
+var uglify = require('gulp-uglify');
+var streamify = require('gulp-streamify');
+var rename = require('gulp-rename');
 
 
 function handleErrors() {
@@ -26,7 +26,10 @@ function buildScript(file, watch) {
   var props = {
     entries: ['./src/' + file],
     debug : true,
-    transform:  [[babelify, {'presets': ['es2015']}]],
+    transform:  [
+      [ stringify, { extensions: ['.html'], minify: true }],
+      [ babelify, {'presets': ['es2015']}]
+    ],
     sourceType: 'module'
   };
 
@@ -38,7 +41,11 @@ function buildScript(file, watch) {
     return stream
       .on('error', handleErrors)
       .pipe(source(file))
-      .pipe(gulp.dest('./.tmp'));
+      .pipe( streamify(uglify()) )
+      .pipe(rename(function (path) {
+        path.basename = "angular-formly-repeating-section";
+      }))
+      .pipe(gulp.dest('./dist'));
   }
 
   // listen for an update and run rebundle
@@ -51,44 +58,10 @@ function buildScript(file, watch) {
   return rebundle();
 }
 
-// build html
-function buildHtml() {
-
-  gulp.src("./src/*.html")
-	.pipe(minifyHtml({
-		empty: true,
-		spare: true,
-		quotes: true
-	}))
-	.pipe(ngHtml2Js({
-		moduleName: "RepeatingSectionPartials"
-	}))
-	.pipe(concat("partials.min.js"))
-	.pipe(uglify())
-	.pipe(gulp.dest("./.tmp"));
-
-}
-
-//concat tmp
-function concatTask() {
-
-  gulp.src('./.tmp/*.js')
-	.pipe(concat('angular-formly-repeating-section.js'))
-	.pipe(uglify())
-	.pipe(gulp.dest('./dist'));
-
-}
-
 // run once
 gulp.task('scripts', function() {
   return buildScript('index.js', false);
 });
-
-gulp.task('html', buildHtml);
-
-gulp.task('concat', concatTask);
-
-gulp.task('build', ['scripts', 'html', 'concat']);
 
 // run 'scripts' task first, then watch for future changes
 gulp.task('default', ['scripts'], function() {
